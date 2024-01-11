@@ -2,33 +2,69 @@
 
 namespace App\Controller;
 
-use App\Entity\Conference;
 use App\Repository\CommentRepository;
+use App\Entity\Conference;
+use App\Entity\Comment;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Form\CommentType;
 use App\Repository\ConferenceRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Annotation\Route;
-use Twig\Environment;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 class ConferenceController extends AbstractController
 {
-    #[Route('/', name: 'homepage')]
-    public function index(Environment $twig, ConferenceRepository $conferenceRepository): Response
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+    )
     {
-        return new Response($twig->render('conference/index.html.twig', [
-            'conferences' => $conferenceRepository->findAll(),
-        ]));
     }
-   #[Route('/conference/{id}', name: 'conference')]
-   public function show(Request $request, Environment $twig, Conference $conference, CommentRepository $commentRepository): Response
-   {
-       $offset = max(0, $request->query->getInt('offset', 0));
-       $paginator = $commentRepository->getCommentPaginator($conference, $offset);
-       return new Response($twig->render('conference/show.html.twig', [
-           'conference' => $conference,
-           'comments' => $paginator,
-           'previous' => $offset - CommentRepository::PAGINATOR_PER_PAGE,
-           'next' => min(count($paginator), $offset + CommentRepository::PAGINATOR_PER_PAGE),       ]));
-   }
+
+    #[Route('/', name: 'homepage')]
+    public function index(ConferenceRepository $conferenceRepository): Response
+    {
+        return $this->render('conference/index.html.twig', [
+            'conferences' => $conferenceRepository->findAll(),
+        ]);
+    }
+
+    #[Route('/conference/{slug}', name: 'conference')]
+    public function show(
+        Request                           $request,
+        Conference                        $conference,
+        CommentRepository                 $commentRepository,
+        #[Autowire('%photo_dir%')] string $photoDir,
+    ): Response
+    {
+
+        $comment = new Comment();
+        $form = $this->createForm(CommentType::class, $comment);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $comment->setConference($conference);
+            if ($photo = $form['photo']->getData()) {
+                $filename = bin2hex(random_bytes(6)).'.'.$photo->guessExtension();
+                $photo->move($photoDir, $filename);
+                $comment->setPhotoFilename($filename);
+            }
+
+
+            $this->entityManager->persist($comment);
+            $this->entityManager->flush();
+
+            return $this->redirectToRoute('conference', ['slug' => $conference->getSlug()]);
+        }
+
+        $offset = max(0, $request->query->getInt('offset', 0));
+        $paginator = $commentRepository->getCommentPaginator($conference, $offset);
+        return $this->render('conference/show.html.twig', [
+            'conference' => $conference,
+            'comments' => $paginator,
+            'previous' => $offset - CommentRepository::PAGINATOR_PER_PAGE,
+            'next' => min(count($paginator), $offset + CommentRepository::PAGINATOR_PER_PAGE),
+            'comment_form' => $form,
+        ]);
+    }
 }
