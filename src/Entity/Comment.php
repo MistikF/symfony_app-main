@@ -6,14 +6,30 @@ use App\Repository\CommentRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use Symfony\Component\Serializer\Annotation\Groups;
+use ApiPlatform\Metadata\GetCollection;
 
 #[ORM\Entity(repositoryClass: CommentRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[ApiResource(
+       operations: [
+           new Get(normalizationContext: ['groups' => 'comment:item']),
+           new GetCollection(normalizationContext: ['groups' => 'comment:list'])
+       ],
+    order: ['createdAt' => 'DESC'],
+    paginationEnabled: false,
+)]
+#[ApiFilter(SearchFilter::class, properties: ['conference' => 'exact'])]
 class Comment
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?int $id = null;
 
     #[ORM\PrePersist]
@@ -24,26 +40,35 @@ class Comment
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?string $author = null;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?string $text = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Email]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?string $email = null;
 
     #[ORM\Column]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'comments')]
     #[ORM\JoinColumn()]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?Conference $conference = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['comment:list', 'comment:item'])]
     private ?string $photoFilename = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $state = null;
 
 
     public function getId(): ?int
@@ -128,5 +153,16 @@ class Comment
         return $this;
     }
 
+    public function getState(): ?string
+    {
+        return $this->state;
+    }
+
+    public function setState(string $state): static
+    {
+        $this->state = $state;
+
+        return $this;
+    }
 
 }

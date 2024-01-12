@@ -16,6 +16,11 @@ COPY ./docker/php/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
 # Postgres and Intl
 RUN apk add --no-cache libpq-dev icu-dev && docker-php-ext-install pdo_pgsql intl
 
+RUN apk update && apk add --no-cache \
+    libxslt-dev \
+    libzip-dev \
+    && docker-php-ext-install xsl zip
+
 # Configure non-root user.
 ARG PUID=1000
 ARG PGID=1000

@@ -48,5 +48,13 @@ migrate: db_migrate
 db_migration_down:
 	${DOCKER_COMPOSE} exec -u www-data php-fpm bin/console doctrine:migrations:execute "App\Shared\Infrastructure\Database\Migrations\Version********" --down --dry-run
 
+tests:
+	symfony console doctrine:database:drop --force --env=test || true
+	symfony console doctrine:database:create --env=test
+	symfony console doctrine:migrations:migrate -n --env=test
+	symfony console doctrine:fixtures:load -n --env=test
+	symfony php bin/phpunit $(MAKECMDGOALS)
+.PHONY: tests
+
 db_drop:
 	docker-compose -f ./docker/docker-compose.yml exec -u www-data php-fpm bin/console doctrine:schema:drop --force

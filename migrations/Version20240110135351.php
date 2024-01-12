@@ -27,9 +27,7 @@ final class Version20240110135351 extends AbstractMigration
         $this->addSql('COMMENT ON COLUMN comment.created_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('CREATE TABLE conference (id INT NOT NULL, city VARCHAR(255) NOT NULL, year VARCHAR(4) NOT NULL, is_international BOOLEAN NOT NULL, PRIMARY KEY(id))');
         $this->addSql('ALTER TABLE comment ADD CONSTRAINT FK_9474526C604B8382 FOREIGN KEY (conference_id) REFERENCES conference (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
-        $this->addSql('ALTER TABLE comment ADD COLUMN photo_filename VARCHAR(255) DEFAULT NULL');
     }
-
     public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
